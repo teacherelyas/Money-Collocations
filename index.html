@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Money Collocations</title>
+<style>
+  :root{
+    --bg:#f4f7fb; --card:#ffffff; --ink:#14213d; --muted:#4a5568;
+    --blue:#1d4ed8; --blue-soft:#dbeafe; --green:#15803d; --green-soft:#dcfce7;
+    --amber:#b45309; --amber-soft:#fef3c7; --line:#cbd5e1;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:var(--bg);color:var(--ink);font-family:"Segoe UI",Arial,Helvetica,sans-serif}
+  #deck{height:100vh;display:flex;flex-direction:column}
+  #progress{height:8px;background:#e2e8f0}
+  #bar{height:100%;width:0;background:var(--blue);transition:width .3s}
+  #stage{flex:1;position:relative;overflow:hidden}
+  .slide{position:absolute;inset:0;display:none;padding:4vh 6vw;overflow-y:auto;align-items:center;justify-content:center}
+  .slide.active{display:flex}
+  .inner{width:100%;max-width:1100px;margin:auto}
+  .tag{display:inline-block;background:var(--blue);color:#fff;font-weight:700;font-size:clamp(14px,1.6vw,20px);padding:6px 16px;border-radius:999px;margin-bottom:22px;letter-spacing:.5px}
+  .tag.p2{background:var(--amber)}
+  h1{font-size:clamp(34px,6vw,76px);line-height:1.1;color:var(--ink)}
+  h2{font-size:clamp(26px,4vw,52px);line-height:1.25;margin-bottom:12px}
+  .sub{font-size:clamp(18px,2.4vw,30px);color:var(--muted);margin-top:18px}
+  .center{text-align:center}
+  .title-slide{background:linear-gradient(135deg,#dbeafe,#f4f7fb 60%)}
+  .divider h1{color:var(--blue)}
+  .divider.p2 h1{color:var(--amber)}
+  .instr{font-size:clamp(20px,2.8vw,34px);margin-top:24px}
+  .sentence{font-size:clamp(24px,3.6vw,46px);line-height:1.6;background:var(--card);border:2px solid var(--line);border-radius:18px;padding:3vh 3vw;margin:10px 0 24px}
+  .chip{display:inline-block;background:var(--blue-soft);color:var(--blue);font-weight:700;border:2px solid var(--blue);border-radius:10px;padding:0 12px;margin:0 4px;transition:.2s}
+  .chip.right{background:var(--green);color:#fff;border-color:var(--green)}
+  .chip.dim{opacity:.35}
+  .question{font-size:clamp(26px,3.8vw,48px);line-height:1.35;font-weight:700;background:var(--card);border-left:12px solid var(--amber);border-radius:14px;padding:3vh 3vw;margin:10px 0 26px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+  button.reveal{font-size:clamp(18px,2.2vw,28px);font-weight:700;background:var(--blue);color:#fff;border:none;border-radius:12px;padding:14px 30px;cursor:pointer;box-shadow:0 3px 0 #1e3a8a}
+  button.reveal:hover{background:#1e40af}
+  button.reveal:active{transform:translateY(2px);box-shadow:none}
+  .p2btn button.reveal{background:var(--amber);box-shadow:0 3px 0 #78350f}
+  .p2btn button.reveal:hover{background:#92400e}
+  .hidden-box{display:none;margin-top:24px}
+  .hidden-box.show{display:block;animation:pop .3s ease}
+  @keyframes pop{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .answer{background:var(--green-soft);border:3px solid var(--green);color:#14532d;border-radius:14px;padding:16px 24px;font-size:clamp(22px,3vw,38px);font-weight:700}
+  .teach{background:var(--card);border:2px solid var(--line);border-radius:14px;padding:18px 24px;margin-top:16px;font-size:clamp(18px,2.4vw,30px);line-height:1.5}
+  .teach .lbl{display:block;font-weight:800;color:var(--blue);font-size:.8em;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+  .teach ul{list-style:none;margin-top:10px}
+  .teach li{background:var(--blue-soft);border-radius:8px;padding:6px 14px;margin:6px 0}
+  .teach .note{margin-top:12px;color:var(--muted)}
+  .sample{background:var(--amber-soft);border:3px solid var(--amber);border-radius:14px;padding:20px 26px;font-size:clamp(20px,2.8vw,34px);line-height:1.5;color:#451a03}
+  .sample .lbl{display:block;font-weight:800;color:var(--amber);font-size:.7em;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+  #nav{display:flex;align-items:center;justify-content:space-between;padding:10px 20px;background:#fff;border-top:2px solid var(--line)}
+  #nav button{font-size:18px;font-weight:700;padding:10px 24px;border-radius:10px;border:2px solid var(--blue);background:#fff;color:var(--blue);cursor:pointer}
+  #nav button:hover{background:var(--blue);color:#fff}
+  #count{font-size:18px;color:var(--muted);font-weight:600}
+</style>
+</head>
+<body>
+<div id="deck">
+  <div id="progress"><div id="bar"></div></div>
+  <div id="stage"></div>
+  <div id="nav">
+    <button id="prev">&larr; Previous</button>
+    <span id="count"></span>
+    <button id="next">Next &rarr;</button>
+  </div>
+</div>
+
+<script>
+const vocab = [
+ {q:"I lent Bill $20; he says he'll {pay|spend} me back next week.", ans:0,
+  a:"pay", t:"We say pay someone back when we return money that we borrowed from them.",
+  ex:["I borrowed $50 from John.","I need to pay John back next week."]},
+ {q:"Excuse me, it's none of your business how much money I {get|make}.", ans:1,
+  a:"make", t:"We commonly say make money when talking about receiving money from work.",
+  ex:["I make about $2,000 a month.","How much money do you make?"], note:"We can also say earn money."},
+ {q:"Greenpeace {raised|rose} five million dollars to help preserve the Atlantic rainforest.", ans:0,
+  a:"raised", t:"Raise money means to collect money, usually for a project, charity, or organization.",
+  ex:["The organization raised money for children.","They are trying to raise money for cancer research."],
+  note:"Rise is different. It means to go up by itself. &nbsp;Example: Prices rose last year."},
+ {q:"How much of my income should I {inherit|invest}, and how much should I put into savings?", ans:1,
+  a:"invest", t:"Invest money means to put money into something with the hope of making a profit in the future.",
+  ex:["I want to invest some of my savings.","She invested money in the stock market."],
+  note:"Inherit means to receive money or property from someone who has died."},
+ {q:"I can't believe I {ruined|wasted} $10 on a calculator that doesn't even work!", ans:1,
+  a:"wasted", t:"Waste money means to spend money on something unnecessary, useless, or disappointing.",
+  ex:["Don't waste money on things you don't need.","I wasted $100 on a product I never use."]},
+ {q:"I didn't have enough savings to pay my college tuition, so I had to {pick|take} out a student loan.", ans:1,
+  a:"take", t:"The collocation is take out a loan.",
+  ex:["I had to take out a loan to buy a house.","She took out a student loan."]},
+ {q:"Sometimes your employer can pay your salary by {doing|making} a deposit directly in your bank account.", ans:1,
+  a:"making", t:"We say make a deposit when we put money into a bank account.",
+  ex:["I made a deposit yesterday.","My employer makes a deposit into my account every month."]},
+ {q:"I really admire rich people who {donate|sponsor} a large portion of their wealth to charity.", ans:0,
+  a:"donate", t:"Donate money means to give money to a person, organization, or cause without expecting payment in return.",
+  ex:["She donates money to charity.","They donated $10,000 to the hospital."],
+  note:"Sponsor is different and often means providing money to support an event, person, organization, or activity."},
+ {q:"I try not to eat out at restaurants too often; I'm trying to {keep|save} money.", ans:1,
+  a:"save", t:"The common expression is save money, meaning to avoid spending it so you can use it later.",
+  ex:["I'm saving money for a new car.","You should save some money for emergencies."]},
+ {q:"Let's {exchange|replace} money here at the airport so that we can get a taxi to the hotel.", ans:0,
+  a:"exchange", t:"Exchange money means changing one currency into another.",
+  ex:["I need to exchange dollars for euros.","Where can I exchange money?"],
+  note:"Replace means to put something new in the place of something old or broken."},
+ {q:"My son {earned|won} $50 for taking care of the neighbor's dogs over the weekend.", ans:0,
+  a:"earned", t:"Earn money means receiving money because you worked or provided a service.",
+  ex:["She earned money by teaching English.","He earned $50 for helping his neighbor."],
+  note:"We usually use win money when money is received as a prize in a competition, game, or lottery."},
+ {q:"We need to {give|make} a budget so that we don't end up spending more than we earn.", ans:1,
+  a:"make", t:"The correct collocation is make a budget.",
+  ex:["We need to make a budget.","I made a monthly budget to control my spending."],
+  note:"We can also say stick to a budget, meaning follow the spending plan."}
+];
+
+const disc = [
+ ["What are some ways people can earn money besides having a traditional full-time job?","People can earn money by freelancing, teaching online, selling products, or doing part-time work. Some people also make money from investments or online businesses."],
+ ["What is the best way to save money every month?","I think the best way is to make a budget and stick to the budget. I also try to set aside money as soon as I receive my salary."],
+ ["What things do people often waste money on?","People often waste money on expensive restaurants, unnecessary clothes, subscriptions, and things they don't really need."],
+ ["What would you do if money were tight one month?","If money were tight, I would make a budget and reduce unnecessary spending. I would try to save money by eating at home and avoiding unnecessary purchases."],
+ ["How much money do you think people should have in an emergency fund?","I think people should have enough money to cover at least three to six months of living expenses. This can help them if they lose their job or have an unexpected expense."],
+ ["Do you think everyone should learn how to manage money?","Yes. Everyone should learn how to manage money because being financially savvy can help people avoid debt and make better financial decisions."],
+ ["Would you rather save your money or invest it?","I would probably do both. I would save money for emergencies and invest money that I don't need immediately."],
+ ["What are some risks of investing money?","The biggest risk is losing money. For example, if the economy goes downhill, the value of some investments can fall."],
+ ["Have you ever borrowed money from someone?","Yes, I have. I once borrowed money from a friend because I didn't have enough cash at the time. I paid the money back a few days later."],
+ ["Would you take out a loan to buy a house or a car?","I might take out a loan to buy a house because a house is very expensive. However, I would carefully consider the interest and monthly installments first."],
+ ["What are the advantages and disadvantages of taking out a loan?","The advantage is that you can buy something without having all the money immediately. The disadvantage is that you have to pay the money back, usually with interest."],
+ ["Have you ever inherited money or property?","No, I haven't inherited money or property. However, I know people who have inherited property from their parents or grandparents."],
+ ["If you inherited a fortune, what would you do with it?","If I inherited a fortune, I would save some of it, invest some of it, and use some of it to help my family. I would also donate money to a few good causes."],
+ ["What kind of things are worth spending a lot of money on?","I think it is worth spending money on education, healthcare, a comfortable home, and things that improve your quality of life. However, I wouldn't squander money on luxury items I don't need."],
+ ["Do you think people should have a budget?","Yes. People should make a budget because it helps them understand where their money goes. However, they also need to stick to the budget."],
+ ["When you travel, where do you usually exchange money?","I usually exchange money at a bank or an official exchange office. I wouldn't exchange money with strangers because I could receive counterfeit bills."],
+ ["Would you donate money to charity if you became very wealthy?","Yes, I would. I would like to donate money to organizations that help children, protect the environment, or support medical research."],
+ ["Why do non-profit organizations need to raise money?","Non-profit organizations need to raise money to pay for their projects and help the people or causes they support. They usually depend on donations and other forms of funding."],
+ ["What is something you bought that you later felt was a waste of money?","I once bought an expensive piece of technology that I hardly used. Looking back, I think I wasted money on it."],
+ ["What does being financially savvy mean to you?","To me, being financially savvy means knowing how to earn, save, spend, and invest money responsibly. It also means knowing how to make a budget, stick to it, and prepare for unexpected expenses."]
+];
+
+const slides = [];
+slides.push(`<div class="inner center"><h1>Money Collocations</h1><p class="sub">Vocabulary Quiz &amp; Discussion</p></div>`);
+slides.push(`<div class="inner center divider"><span class="tag">PART 1</span><h1>Vocabulary Quiz</h1><p class="instr">Circle the best word to complete each sentence.</p></div>`);
+
+vocab.forEach((v,i)=>{
+  const sentence = v.q.replace(/\{([^|]+)\|([^}]+)\}/, (m,a,b)=>`<span class="chip" data-i="0">${a}</span> / <span class="chip" data-i="1">${b}</span>`);
+  slides.push(`<div class="inner" data-ans="${v.ans}">
+    <span class="tag">PART 1 &middot; QUESTION ${i+1} OF 12</span>
+    <div class="sentence"><b>${i+1}.</b> ${sentence}</div>
+    <button class="reveal">Show Answer</button>
+    <div class="hidden-box">
+      <div class="answer">Answer: ${v.a}</div>
+      <div class="teach"><span class="lbl">Teaching point</span>${v.t}
+        <ul>${v.ex.map(e=>`<li>${e}</li>`).join("")}</ul>
+        ${v.note?`<div class="note">${v.note}</div>`:""}
+      </div>
+    </div></div>`);
+});
+
+slides.push(`<div class="inner center divider p2"><span class="tag p2">PART 2</span><h1>Discussion</h1><p class="instr">Try to answer each question using the money collocations from the lesson.</p></div>`);
+
+disc.forEach((d,i)=>{
+  slides.push(`<div class="inner p2btn">
+    <span class="tag p2">PART 2 &middot; QUESTION ${i+1} OF 20</span>
+    <div class="question">${i+1}. ${d[0]}</div>
+    <button class="reveal">Show Sample Answer</button>
+    <div class="hidden-box"><div class="sample"><span class="lbl">Sample answer</span>${d[1]}</div></div></div>`);
+});
+
+slides.push(`<div class="inner center"><h1>Great job!</h1><p class="sub">You practiced the money collocations.</p></div>`);
+
+const stage = document.getElementById("stage");
+slides.forEach((html,i)=>{
+  const s = document.createElement("section");
+  s.className = "slide" + (i===0?" title-slide":"");
+  s.innerHTML = html;
+  stage.appendChild(s);
+  const btn = s.querySelector("button.reveal");
+  if(btn){
+    const box = s.querySelector(".hidden-box");
+    btn.addEventListener("click",()=>{
+      const show = box.classList.toggle("show");
+      btn.textContent = show ? "Hide Answer" : (s.querySelector(".p2btn")||s.querySelector(".inner.p2btn") ? "Show Sample Answer":"Show Answer");
+      const inner = s.querySelector(".inner");
+      if(inner.dataset.ans!==undefined){
+        s.querySelectorAll(".chip").forEach(c=>{
+          c.classList.toggle("right", show && c.dataset.i===inner.dataset.ans);
+          c.classList.toggle("dim", show && c.dataset.i!==inner.dataset.ans);
+        });
+      }
+    });
+  }
+});
+
+const els = [...document.querySelectorAll(".slide")];
+let cur = 0;
+function go(n){
+  cur = Math.max(0,Math.min(els.length-1,n));
+  els.forEach((e,i)=>e.classList.toggle("active",i===cur));
+  document.getElementById("bar").style.width = (cur/(els.length-1)*100)+"%";
+  document.getElementById("count").textContent = (cur+1)+" / "+els.length;
+  els[cur].scrollTop = 0;
+}
+document.getElementById("next").onclick=()=>go(cur+1);
+document.getElementById("prev").onclick=()=>go(cur-1);
+document.addEventListener("keydown",e=>{
+  if(e.key==="ArrowRight"||e.key==="PageDown") go(cur+1);
+  if(e.key==="ArrowLeft"||e.key==="PageUp") go(cur-1);
+  if(e.key===" "||e.key==="Enter"){
+    const b = els[cur].querySelector("button.reveal");
+    if(b){ e.preventDefault(); b.click(); }
+  }
+});
+go(0);
+</script>
+</body>
+</html>
